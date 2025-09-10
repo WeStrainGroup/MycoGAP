@@ -98,29 +98,10 @@ filter_abundance <- opt$filter_abundance
 filter_depth <- opt$filter_depth
 thread <- opt$thread
 
-# for check and test
-project0 <- "WeD"
-project <- paste0(project0, "_")
-path_in <- "/data/wangxinyu/ITS/Project/WeD/dada/raw"
-path_out <- "/data/wangxinyu/ITS_Public/temp"
-if(!dir.exists(path_out)) {dir.create(path_out)}
-seq_type <- "SE"
-marker <- "Auto"
-pattern_F = ".1.fq.gz"
-pattern_R = ".2.fq.gz"
-maxEE_F <- 5
-maxEE_R <- 5
-itsx_e <- 0.01
-ref <- "/data/wangxinyu/ITS/Ref/Unite/sh_general_release_all_04.04.2024/sh_general_release_dynamic_all_04.04.2024.fasta"
-minBoot <- 50
-vsearch_id = 0.985
-filter_abundance <- 1/10000
-filter_depth <- 5000
-thread <- 96
 
 
 message("\n=================================================")
-message("\nEnjoy using MycoGAP (1.6.2)!")
+message("\nEnjoy using MycoGAP (1.6.3)!")
 message("\nAuthor: Xinyu Wang, Westlake University")
 message("\nGitHub: https://github.com/WeStrainGroup/MycoGAP")
 message("\nContact: wangxinyu30@westlake.edu.cn")

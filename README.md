@@ -40,7 +40,7 @@ mycogap --help
 `mamba` can be used in place of `conda`. Source installation, offline use, and
 verification are covered in [Installation](docs/installation.md).
 
-## Usage
+## Quick start
 
 For paired files named like `P01.1.fq.gz` and `P01.2.fq.gz`:
 
@@ -61,7 +61,7 @@ match only the intended FASTQ files. Single-end Illumina, PacBio, custom
 prevalence, CLR, and non-gut examples are provided in
 [Usage](docs/quick-start.md).
 
-## CLI reference
+## Options
 
 | Option | Accepted values | Default | Purpose |
 | --- | --- | --- | --- |
@@ -142,11 +142,11 @@ Method and software citations are listed under [References](docs/references.md).
 
 ## Documentation
 
+- [Algorithm and rationale](docs/algorithm.md)
+- [Benchmark](docs/benchmark.md)
 - [Installation](docs/installation.md)
 - [Usage](docs/quick-start.md)
 - [Full outputs](docs/outputs.md)
-- [Algorithm and rationale](docs/algorithm.md)
-- [Benchmark](docs/benchmark.md)
 - [Reference databases](docs/reference-databases.md)
 - [Macrofungal filtering](docs/macrofungi-filtering.md)
 - [FAQ](docs/faq.md)

@@ -1,4 +1,4 @@
-# Quick start
+# Usage
 
 ## 1. Activate the environment
 

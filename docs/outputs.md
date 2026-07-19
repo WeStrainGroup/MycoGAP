@@ -1,4 +1,4 @@
-# Output reference
+# Full outputs
 
 All key filenames begin with `PROJECT_`, where `PROJECT` is the value passed
 to `--project`.

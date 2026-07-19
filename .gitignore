@@ -1,0 +1,26 @@
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
+
+# Local inputs and pipeline outputs
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+mycogap_output/
+*_out/
+output/
+logs/
+
+# Conda build artifacts
+conda-bld/
+build_artifacts/
+*.conda
+*.tar.bz2
+
+# Temporary files
+*.pid
+*.tmp
+*.swp
+tmp/

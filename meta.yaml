@@ -1,6 +1,6 @@
 package:
   name: mycogap
-  version: 1.6.3
+  version: 1.7.0
 
 source:
   path: .
@@ -9,51 +9,42 @@ build:
   number: 0
   noarch: generic
   script: |
-    # 强制清理旧文件
-    rm -rf $PREFIX/lib/R/library/mycogap
-    # 创建必要目录
-    mkdir -p $PREFIX/bin
-    mkdir -p $PREFIX/lib/R/library/mycogap/ref
-
-    # 复制脚本到 bin
-    cp bin/mycogap $PREFIX/bin/
-    chmod +x $PREFIX/bin/mycogap
-
-    # 复制压缩的参考数据库到 ref
-    cp -v ref/mushroom_genus.csv $PREFIX/lib/R/library/mycogap/ref/
-    cp -v ref/sh_general_release_dynamic_all_19.02.2025.fasta.gz $PREFIX/lib/R/library/mycogap/ref/
-
-    # 验证复制结果
-    ls -l $PREFIX/lib/R/library/mycogap/ref/
+    install -d "$PREFIX/bin"
+    install -d "$PREFIX/lib/R/library/mycogap/ref"
+    install -m 0755 bin/mycogap "$PREFIX/bin/mycogap"
+    install -m 0644 ref/macrofungi_list.csv "$PREFIX/lib/R/library/mycogap/ref/macrofungi_list.csv"
+    install -m 0644 ref/sh_general_release_dynamic_all_19.02.2025.fasta.gz "$PREFIX/lib/R/library/mycogap/ref/sh_general_release_dynamic_all_19.02.2025.fasta.gz"
 
 requirements:
   run:
-    - python >=3.10,<3.11
     - r-base >=4.4
-    # Bioconductor packages
-    - bioconda::bioconductor-dada2
-    - bioconda::bioconductor-biostrings
-    - bioconda::bioconductor-phyloseq
-    - bioconda::bioconductor-microbiome
-    # R packages
-    - conda-forge::r-biocmanager
-    - conda-forge::r-optparse
-    - conda-forge::r-tidyverse
-    - conda-forge::r-data.table
-    - conda-forge::r-vegan
-    - conda-forge::r-fs
-    - conda-forge::r-r.utils
-    # Bioinformatics tools
-    - bioconda::seqkit
-    - bioconda::itsx
-    - bioconda::vsearch
+    - bioconductor-dada2
+    - bioconductor-biostrings
+    - bioconductor-phyloseq
+    - bioconductor-microbiome
+    - r-optparse
+    - r-tidyverse
+    - r-data.table
+    - r-vegan
+    - r-fs
+    - r-r.utils
+    - seqkit
+    - itsx
+    - vsearch
 
-channel_sources:
-  - conda-forge
-  - bioconda
-  - defaults
+test:
+  commands:
+    - mycogap --help
+    - test -r "$PREFIX/lib/R/library/mycogap/ref/macrofungi_list.csv"
+    - test -r "$PREFIX/lib/R/library/mycogap/ref/sh_general_release_dynamic_all_19.02.2025.fasta.gz"
 
 about:
   home: https://github.com/WeStrainGroup/MycoGAP
-  license: MIT
-  summary: "Mycobiome in Gut Analysis Pipeline (MycoGAP) for accurate gut fungal community profiling"
+  license: CC-BY-NC-SA-4.0
+  license_file: LICENSE
+  summary: "Accurate, human gut-focused, ITS-aware analysis with MycoGAP"
+  description: |
+    MycoGAP is an accurate, human gut-focused, ITS-aware workflow for
+    standardized analysis of heterogeneous datasets, including paired-end or
+    single-end Illumina and PacBio ITS data.
+  dev_url: https://github.com/WeStrainGroup/MycoGAP

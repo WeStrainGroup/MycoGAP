@@ -1,199 +1,171 @@
 # MycoGAP
 
-MycoGAP (**Myco**biome in **G**ut **A**nalysis **P**ipeline) is a command-line tool for accurate profiling of the human gut mycobiome using ITS metabarcoding data. 
-
----
+![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)
+[![Conda](https://img.shields.io/badge/conda-westraingroup-orange.svg)](https://anaconda.org/westraingroup/mycogap)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 
 ## Introduction
 
-Accurate characterization of the human gut mycobiome requires analytical pipelines that address the unique biological and technical challenges of the ITS marker. These challenges include substantial variability in amplicon length, retention of conserved rRNA fragments after trimming, intragenomic polymorphisms, and frequent co-amplification of non-fungal eukaryotes and dietary macrofungi (A and B). 
+MycoGAP (**Myco**biome in **G**ut **A**nalysis **P**ipeline) is an accurate,
+human gut-focused, ITS-aware workflow for standardized analysis of
+heterogeneous datasets. It supports paired-end and single-end Illumina FASTQ
+files and PacBio reads, and it can process trimmed or untrimmed amplicons
+without prior knowledge of primer sequences or the targeted ITS region.
 
-Despite these complexities, many studies continue to process ITS data using standard 16S rRNA gene metabarcoding workflows, leading to systematic biases. Such biases may distort diversity estimates, misrepresent taxonomic composition, and ultimately compromise biological interpretation.
+Human gut ITS metabarcoding is complicated by extreme ITS-length variation,
+retained conserved rRNA flanks, intragenomic ITS polymorphism, and frequent
+co-amplification of macrofungal and non-fungal eukaryotic DNA. MycoGAP
+addresses these challenges by combining DADA2 denoising, ITSx-based ITS
+extraction, chimera removal, eukaryote-inclusive UNITE annotation, VSEARCH
+species-hypothesis clustering, and gut-focused biological filtering. See
+[Algorithm and rationale](docs/algorithm.md),
+[Benchmark](docs/benchmark.md), and
+[Macrofungal filtering](docs/macrofungi-filtering.md) for the scientific basis
+and validation evidence.
 
-To address these challenges, we developed the Mycobiome in Gut Analysis Pipeline (MycoGAP; C)—an open-source tool tailored for human gut mycobiome analysis. 
-
-MycoGAP processes raw ITS sequences without prior primer or length information, integrates ITS-specific corrections, and outputs all files needed for downstream analyses alongside detailed QC reports. Distributed as a conda package, it offers adjustable parameters for all major steps, balancing robustness with flexibility.
-
-Please refer to our paper for a detailed description of the algorithm and benchmarking against the unadapted pipeline.
-
-![ITS_Seq_Problems.png](ITS_Seq_Problems.png)
-
----
+![MycoGAP workflow](docs/assets/workflow_mycogap.png)
 
 ## Installation
 
-We recommend installing MycoGAP in a clean conda environment to avoid dependency conflicts. The reference database will be automatically downloaded with the package.
+Install MycoGAP in a clean Conda environment:
 
-```r
-conda install westraingroup::mycogap
+```bash
+conda create -n mycogap \
+  -c westraingroup -c conda-forge -c bioconda \
+  mycogap
+conda activate mycogap
+mycogap --help
 ```
 
----
+`mamba` can be used in place of `conda`. MycoGAP ships with a frozen UNITE
+reference snapshot and curated macrofungal genus list; it does not download a
+database during analysis. Source installation, offline use, and verification
+are covered in [Installation](docs/installation.md).
 
-## Usage
+## Quick start
 
-### Option
+For paired files named like `P01.1.fq.gz` and `P01.2.fq.gz`:
 
-| **Option** | **Description** | **Default** |
+```bash
+mycogap \
+  --project cohort1 \
+  --input /path/to/fastq \
+  --output /path/to/mycogap_output \
+  --seq_type PE \
+  --pattern_f '\.1\.fq\.gz$' \
+  --pattern_r '\.2\.fq\.gz$' \
+  --marker Auto \
+  --thread 16
+```
+
+The input patterns are R regular expressions. Quote and anchor them so they
+match only the intended FASTQ files. Single-end Illumina, PacBio, custom
+prevalence, CLR, and non-gut examples are provided in
+[Quick start](docs/quick-start.md).
+
+## Main outputs
+
+```text
+OUTPUT/
+├── 1_dada2/
+│   ├── check/       FASTQ statistics, quality profiles, and error plots
+│   ├── filtered/    DADA2-filtered FASTQ files
+│   ├── itsx/        ITSx inputs and extracted ITS sequences
+│   └── result/      ASV tables and taxonomy before SH clustering
+├── 2_vsearch/       SH centroids, mappings, abundance, and taxonomy
+├── 3_phyloseq/
+│   ├── all/         All retained eukaryotic signals after general QC
+│   ├── microfungi/  Fungi after the selected macrofungal strategy
+│   └── vegetable/   Optional macrofungi and plant outputs
+└── PROJECT.log      Run log for progress or verbose mode
+```
+
+Genus- and phylum-level `p0` tables are always produced. Optional prevalence
+tables and CLR transformations are controlled by `--prev_filter` and
+`--clr`. Read-count summaries remain separate from diversity tables, and the
+read-count column is named `readcount`. See [Main outputs](docs/outputs.md) for
+file-level definitions and table orientation.
+
+## Key options
+
+| Option | Purpose | Default |
 | --- | --- | --- |
-| --project | Project name (used as prefix for key output files) |  |
-| --input | Path to folder containing FASTQ files to process |  |
-| --output | Path to folder for output |  |
-| --seq_type | Sequencing type: ‘PE’ for paired-end, ‘SE’ for single-end, or ‘PB’ for PacBio | PE |
-| --marker | Marker gene sequenced: ‘ITS1’, ‘ITS2’, ‘full’; 'Auto' for automatic detection. | Auto |
-| --pattern_f | Pattern to match forward reads (e.g., ‘.1.fq.gz’ for PE, or ‘.fq.gz’ for SE / PB) |  |
-| --pattern_r | Pattern to match reverse reads (e.g., ‘.2.fq.gz’). For SE / PB, must be identical to –pattern_f |  |
-| --maxee_f | Maximum expected errors used by DADA2 filterAndTrim function for forward read | 5 |
-| --maxee_r | Maximum expected errors for reverse reads. For SE / PB, must be identical to –maxee_f  | 5 |
-| --itsx_e | E-value cutoff for domain hits in the HMMER step of ITSx | 0.01 |
-| --ref | Path to reference database for taxonomic assignment | UNITE (V10, all eukaryotes, dynamic) |
-| --minboot | Minimum bootstrap confidence for taxonomic assignment | 50 |
-| --vsearch_id | Identity threshold for VSEARCH clustering | 0.985 |
-| --filter_abundance | ASVs whose relative abundance in a sample falls below this threshold will be set to zero in that sample | 1/10000 |
-| --filter_depth | Samples with fewer usable reads than this threshold will be excluded from downstream analysis | 5000 |
-| --thread | Number of threads to use for parallel computation | 10 |
+| `--project` | Prefix for key output files and `PROJECT.log` | required |
+| `--input`, `--output` | Input FASTQ and output directories | required |
+| `--seq_type` | `PE`, `SE`, or `PB` | `PE` |
+| `--marker` | `Auto`, `ITS1`, `ITS2`, or `full` | `Auto` |
+| `--pattern_f`, `--pattern_r` | Forward/single and reverse filename regexes | required |
+| `--ref` | DADA2-compatible taxonomy reference | packaged UNITE 10.0 |
+| `--macrofungi_filter` | `dual`, `list`, `agaricomycetes`, or `none` | `dual` |
+| `--macrofungi_list` | CSV containing a `Genus` column | packaged list |
+| `--filter_abundance` | Per-sample relative-abundance threshold | `0.0001` |
+| `--filter_depth` | Read depth required for `_fdp` outputs | `5000` |
+| `--prev_filter` | `none`, `standard`, or comma-separated fractions | `none` |
+| `--clr` | Write CLR versions of p0 and selected prevalence tables | `F` |
+| `--log_mode` | Concise `progress` or full `verbose` output | `progress` |
+| `--thread` | Parallel threads | `8` |
 
-### Example
+All options, ranges, validation rules, and fixed biological defaults are
+documented in the [CLI reference](docs/cli-reference.md).
 
-- Execute MycoGAP using **paired-end ITS2 sequencing data** with default parameters.
+`--log_mode progress` shows only the seven main steps and their start times;
+`--log_mode verbose` retains complete R code and external-tool output for
+debugging. Both modes write a single `OUTPUT/PROJECT.log`, and fatal errors
+are recorded before MycoGAP exits with a non-zero status.
 
-```bash
-FASTQ files: 
-V4WPN001.1.fq.gz
-V4WPN001.2.fq.gz
-V4WPN002.1.fq.gz
-V4WPN002.2.fq.gz
-etc.
-```
+## Requirements
 
-```bash
-mycogap \
---project WeP1 \
---input /wangxinyu/Project/WeGut/WeP2/raw \
---seq_type PE \
---pattern_f .1.fq.gz \
---pattern_r .2.fq.gz \
---marker ITS2 \
---output /wangxinyu/Project/WeGut/WeP1/process
-```
+Conda installs the complete tested environment. MycoGAP builds on and credits
+the following open-source projects:
 
-- Execute MycoGAP with **single-end sequencing data without prior knowledge of the sequencing marker**.
+| Project | Role in MycoGAP |
+| --- | --- |
+| [R](https://www.r-project.org/) | Workflow runtime |
+| [DADA2](https://github.com/benjjneb/dada2) | Quality filtering, denoising, read merging, chimera removal, and RDP taxonomy |
+| [ITSx](https://github.com/EnvGen/ITSx) | Structure-aware ITS1/ITS2/full-ITS detection and extraction |
+| [VSEARCH](https://github.com/torognes/vsearch) | Post-denoising clustering into operational species hypotheses |
+| [SeqKit](https://github.com/shenwei356/seqkit) | FASTQ summary statistics |
+| [Biostrings](https://github.com/Bioconductor/Biostrings) | Sequence input and output |
+| [phyloseq](https://github.com/joey711/phyloseq) and [microbiome](https://github.com/microbiome/microbiome) | Community objects, filtering, aggregation, and summaries |
+| [vegan](https://github.com/vegandevs/vegan) | CLR transformation and ecological calculations |
+| [tidyverse](https://github.com/tidyverse/tidyverse), [data.table](https://github.com/Rdatatable/data.table), [optparse](https://github.com/trevorld/r-optparse), [fs](https://github.com/r-lib/fs), and [R.utils](https://github.com/HenrikBengtsson/R.utils) | Data handling, command-line parsing, and utilities |
 
-```bash
-FASTQ files: 
-V4WPN001.fq.gz
-V4WPN002.fq.gz
-etc.
-```
+The exact source environment is recorded in [`environment.yml`](environment.yml).
+Method and software citations are listed under [References](docs/references.md).
 
-```bash
-mycogap \
---project WeP1 \
---input /wangxinyu/Project/WeGut/WeP2/raw \
---seq_type PE \
---pattern_f .fq.gz \
---pattern_r .fq.gz \
---marker Auto \
---output /wangxinyu/Project/WeGut/WeP1/process
-```
+## Documentation
 
-We recommend running MycoGAP with nohup (or other job control tools) and saving the log file for easier tracking and reproducibility.
+- [Installation](docs/installation.md)
+- [Quick start](docs/quick-start.md)
+- [Main outputs](docs/outputs.md)
+- [CLI reference](docs/cli-reference.md)
+- [Algorithm and rationale](docs/algorithm.md)
+- [Benchmark](docs/benchmark.md)
+- [Reference databases](docs/reference-databases.md)
+- [Macrofungal filtering](docs/macrofungi-filtering.md)
+- [FAQ](docs/faq.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
-### Output
+## References
 
-MycoGAP generates a comprehensive set of intermediate and final results, organized into three main folders, each corresponding to a specific processing stage:
-
-```bash
-├── 1_dada2 # DADA2-related process 
-│   ├── check # QC reports
-│   │   ├── WeP2_error_F.png # Plot of DADA2 error rates for forward reads
-│   │   ├── WeP2_error_R.png
-│   │   ├── WeP2_fq_stats_filtered1.jpg # Summary plot of filtered FASTQ file
-│   │   ├── WeP2_fq_stats_filtered2.jpg
-│   │   ├── WeP2_fq_stats_filtered3.jpg
-│   │   ├── WeP2_fq_stats_filtered.tsv # Statistics table of filtered FASTQ file
-│   │   ├── WeP2_fq_stats_raw1.jpg # Summary plot of raw FASTQ file
-│   │   ├── WeP2_fq_stats_raw2.jpg
-│   │   ├── WeP2_fq_stats_raw3.jpg
-│   │   ├── WeP2_fq_stats_raw.tsv # Statistics table of raw FASTQ file
-│   │   ├── WeP2_quality_fqF_filtered.jpg # Quality profile of several filtered forward reads
-│   │   ├── WeP2_quality_fqF_raw.jpg # Quality profile of several raw forward reads
-│   │   ├── WeP2_quality_fqR_filtered.jpg
-│   │   └── WeP2_quality_fqR_raw.jpg
-│   ├── filtered # FASTQ files after filterAndTrim process 
-│   │   ├── V4WPN004.1.fq.gz
-│   │   ├── V4WPN004.2.fq.gz
-│   │   ├── ...
-│   │   ├── V5WPN206.1.fq.gz
-│   │   └── V5WPN206.2.fq.gz
-│   ├── itsx # ITSx output files
-│   │   ├── WeP2_asv_itsx.extraction.results
-│   │   ├── ...
-│   │   ├── WeP2_asv_itsx.summary.txt
-│   │   └── WeP2_asv_raw.fasta
-│   └── result # DADA2 output files
-│       ├── WeP2_seqtab.csv # Feature table after chimera removal
-│       ├── WeP2_seqtab_raw.csv # Feature table before chimera removal
-│       ├── WeP2_taxa_boot.csv # Bootstrap values of taxa assignment
-│       └── WeP2_taxa.csv # Taxonomic assignment table
-├── 2_vsearch # Clustering process for species hypotheses (SHs)
-│   ├── WeP2_ASV_c98.5.fasta # Centroid sequences of SHs
-│   ├── WeP2_ASV_c98.5_index1.tsv # Mapping table of clustering results
-│   ├── WeP2_ASV_c98.5_index2.tsv
-│   ├── WeP2_ASV_unclustered.fasta # Unclustered ASV sequences
-│   ├── WeP2_seqtab_c98.5.csv # Feature table after clustering
-│   └── WeP2_taxa_c98.5.csv # Taxonomic assignment table after clustering
-└── 3_phyloseq # Post-filtering and output for downstream analysis
-    ├── all # Results of all species
-		│   ├── WeP2_diversity_all.csv # Alpha diversity metrics
-		│   ├── WeP2_otu_all.csv # Feature table of SHs after basic filtering
-		│   ├── WeP2_ps_all.rds # Phyloseq subject of SHs after basic filtering
-		│   ├── WeP2_readcount_all.csv # Read counts per sample after basic filtering
-		│   ├── WeP2_refseq_all.fasta # SH sequences after basic filtering
-		│   └── WeP2_taxa_all.csv # Taxonomic assignment table of SHs after basic filtering
-    ├── microfungi # Results of microfungi
-    │   ├── ASV # SH-level results ("_filterdp" = after depth filtering)
-    │   │   ├── WeP2_diversity_microfungi.csv
-    │   │   ├── WeP2_diversity_microfungi_filterdp.csv
-    │   │   ├── WeP2_otu_microfungi.csv
-    │   │   ├── WeP2_otu_microfungi_filterdp.csv
-    │   │   ├── WeP2_ps_microfungi.rds
-    │   │   ├── WeP2_ps_microfungi_filterdp.rds
-    │   │   ├── WeP2_readcount_microfungi.csv
-    │   │   ├── WeP2_readcount_microfungi_filterdp.csv
-    │   │   ├── WeP2_refseq_microfungi.fasta
-    │   │   ├── WeP2_refseq_microfungi_filterdp.fasta
-    │   │   ├── WeP2_taxa_microfungi.csv
-    │   │   └── WeP2_taxa_microfungi_filterdp.csv
-    │   ├── genus # Genus-level results ("_p0, 1, 5, 10" = prevalence filtering; "_clr" = CLR transformation)
-    │   │   ├── ...
-    │   │   └── WeP2_taxa_microfungi_gen_filterdp.csv
-    │   └── phylum # Phylum-level results
-    │       ├── ... 
-    │       └── WeP2_taxa_microfungi_phy_filterdp.csv
-    └── vegetable # Results of vegetable including plants and mushroom (macofungi)
-        ├── mushroom
-        └── plant
-```
-
-For **prevalence filtering**, taxa with prevalence at or below the threshold (e.g., 5%) were aggregated into an “Other” category, thereby preserving the total read counts per sample. 
-
----
+- [Human Gut Mycobiome Atlas analysis code](https://github.com/WeStrainGroup/Fungi_Atlas)
+- [Human Gut Mycobiome Atlas data on Zenodo](https://zenodo.org/records/21100545)
+- [Human Gut Mycobiome Atlas website](https://zheng.lab.westlake.edu.cn/Resource/Resource_GlobalFungi.htm)
+- [APHunter](https://github.com/WeStrainGroup/APHunter)
+- [HuGMycoA](https://github.com/WeStrainGroup/HuGMycoA)
+- [Scientific references for MycoGAP](docs/references.md)
 
 ## Citation
 
-If MycoGAP proves useful in your work, please support us by citing our publication:
-
-…
-
----
+<!-- The final citation will be added after publication. -->
 
 ## Contact
 
-For questions, bug reports, or feature requests, please contact:
+Xinyu Wang, Westlake University
+[wangxinyu30@westlake.edu.cn](mailto:wangxinyu30@westlake.edu.cn)
 
-📧 Xinyu Wang ([wangxinyu30@westlake.edu.cn](mailto:wangxinyu30@westlake.edu.cn))
+## License
 
-We welcome feedback and community contributions!
-
----
+MycoGAP is licensed under the
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](LICENSE)
+([CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)).

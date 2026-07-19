@@ -1,0 +1,20 @@
+name: mycogap-source
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - r-base >=4.4
+  - bioconductor-dada2
+  - bioconductor-biostrings
+  - bioconductor-phyloseq
+  - bioconductor-microbiome
+  - r-optparse
+  - r-tidyverse
+  - r-data.table
+  - r-vegan
+  - r-fs
+  - r-r.utils
+  - seqkit
+  - itsx
+  - vsearch

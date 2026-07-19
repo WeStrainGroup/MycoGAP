@@ -138,7 +138,6 @@ the following open-source projects:
 | [tidyverse](https://github.com/tidyverse/tidyverse), [data.table](https://github.com/Rdatatable/data.table), [optparse](https://github.com/trevorld/r-optparse), [fs](https://github.com/r-lib/fs), and [R.utils](https://github.com/HenrikBengtsson/R.utils) | Data handling, command-line parsing, and utilities |
 
 The exact source environment is recorded in [`environment.yml`](environment.yml).
-Method and software citations are listed under [References](docs/references.md).
 
 ## Documentation
 
@@ -154,10 +153,14 @@ Method and software citations are listed under [References](docs/references.md).
 
 ## References
 
+MycoGAP was used to construct the
+[Human Gut Mycobiome Atlas](https://zheng.lab.westlake.edu.cn/Resource/Resource_GlobalFungi.htm).
+The associated resources are:
+
 - [Human Gut Mycobiome Atlas analysis code](https://github.com/WeStrainGroup/Fungi_Atlas)
-- [Human Gut Mycobiome Atlas data on Zenodo](https://zenodo.org/records/21100545)
 - [Human Gut Mycobiome Atlas website](https://zheng.lab.westlake.edu.cn/Resource/Resource_GlobalFungi.htm)
-- [HuGMycoA](https://github.com/WeStrainGroup/HuGMycoA)
+- [Human Gut Mycobiome Atlas data](https://zenodo.org/records/21100545)
+- [Human Gut Mycobiome Atlas R package](https://github.com/WeStrainGroup/HuGMycoA)
 
 ## Citation
 
